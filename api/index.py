@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
@@ -6,6 +6,7 @@ import numpy as np
 
 app = FastAPI()
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,12 +15,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-with open("q-vercel-latency.json") as f:
+# Load telemetry data
+with open("q-vercel-latency.json", "r") as f:
     data = json.load(f)
+
 
 class Input(BaseModel):
     regions: list[str]
     threshold_ms: float
+
 
 @app.post("/")
 def metrics(inp: Input):
@@ -34,23 +38,25 @@ def metrics(inp: Input):
         up = [x["uptime_pct"] for x in rows]
 
         result[region] = {
-            "avg_latency": round(sum(lat)/len(lat),2),
-            "p95_latency": round(float(np.percentile(lat,95)),2),
-            "avg_uptime": round(sum(up)/len(up),3),
-            "breaches": sum(1 for x in lat if x > inp.threshold_ms)
+            "avg_latency": round(sum(lat) / len(lat), 2),
+            "p95_latency": round(float(np.percentile(lat, 95)), 2),
+            "avg_uptime": round(sum(up) / len(up), 3),
+            "breaches": sum(
+                1 for x in lat
+                if x > inp.threshold_ms
+            )
         }
 
     return result
-from fastapi import Response
 
-@app.options("/{path:path}")
-def options_handler(path: str):
+
+@app.options("/")
+def options_root():
     return Response(
+        status_code=200,
         headers={
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "POST, OPTIONS",
             "Access-Control-Allow-Headers": "*"
         }
     )
-
-
