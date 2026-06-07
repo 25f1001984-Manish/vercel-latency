@@ -15,8 +15,8 @@ async def metrics(request: Request):
     body = await request.json()
     regions = body.get("regions", [])
     threshold_ms = body.get("threshold_ms", 200)
-    base = os.path.dirname(__file__)
-    with open(os.path.join(base, "..", "q-vercel-latency.json")) as f:
+    data_path = os.path.join(os.path.dirname(__file__), "q-vercel-latency.json")
+    with open(data_path) as f:
         data = json.load(f)
     result = {}
     for region in regions:
