@@ -10,7 +10,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -23,25 +23,25 @@ class Input(BaseModel):
     threshold_ms: float
 
 
-@app.post("/")
-async def calculate(inp: Input):
+@app.api_route("/", methods=["POST", "OPTIONS"])
+async def metrics(inp: Input = None):
+
+    if inp is None:
+        return {}
 
     result = {}
 
     for region in inp.regions:
-
         rows = [x for x in data if x["region"] == region]
 
-        latencies = [x["latency_ms"] for x in rows]
-        uptimes = [x["uptime_pct"] for x in rows]
+        lat = [x["latency_ms"] for x in rows]
+        up = [x["uptime_pct"] for x in rows]
 
         result[region] = {
-            "avg_latency": round(sum(latencies) / len(latencies), 2),
-            "p95_latency": round(float(np.percentile(latencies, 95)), 2),
-            "avg_uptime": round(sum(uptimes) / len(uptimes), 3),
-            "breaches": len(
-                [x for x in latencies if x > inp.threshold_ms]
-            )
+            "avg_latency": round(sum(lat) / len(lat), 2),
+            "p95_latency": round(float(np.percentile(lat, 95)), 2),
+            "avg_uptime": round(sum(up) / len(up), 3),
+            "breaches": sum(1 for x in lat if x > inp.threshold_ms)
         }
 
     return result
